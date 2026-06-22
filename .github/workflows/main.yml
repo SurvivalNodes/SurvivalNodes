@@ -1,0 +1,44 @@
+name: Ubuntu KVM + Tmate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: System Info
+        run: |
+          echo "===== CPU ====="
+          lscpu
+          echo
+          echo "===== Memory ====="
+          free -h
+          echo
+          echo "===== KVM Check ====="
+          if [ -e /dev/kvm ]; then
+            echo "KVM Available"
+          else
+            echo "KVM Not Available"
+          fi
+
+      - name: Install Packages
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            qemu-kvm \
+            libvirt-daemon-system \
+            libvirt-clients \
+            bridge-utils \
+            cpu-checker \
+            tmate
+
+      - name: Verify KVM
+        run: |
+          kvm-ok || true
+          ls -la /dev/kvm || true
+
+      - name: Start Tmate Session
+        run: |
+          tmate -F
