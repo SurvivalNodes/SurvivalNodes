@@ -1,156 +1,119 @@
-name: Ubuntu + QEMU + OVMF + SWTPM + Python 3.13 + Tmate
+name: Ubuntu QEMU OVMF SWTPM Tmate
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-ubuntu:
-runs-on: ubuntu-24.04
-timeout-minutes: 360
+  ubuntu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
 
-```
-steps:
-  - name: System Information
-    run: |
-      echo "===== OS ====="
-      cat /etc/os-release
+    steps:
+      - name: System Information
+        run: |
+          echo "===== OS ====="
+          cat /etc/os-release
 
-      echo
-      echo "===== CPU ====="
-      lscpu
+          echo "===== CPU ====="
+          lscpu
 
-      echo
-      echo "===== RAM ====="
-      free -h
+          echo "===== RAM ====="
+          free -h
 
-      echo
-      echo "===== Disk ====="
-      df -h
+          echo "===== DISK ====="
+          df -h
 
-      echo
-      echo "===== Virtualization ====="
-      systemd-detect-virt || true
+      - name: Update System
+        run: |
+          sudo apt update
 
-      echo
-      echo "===== KVM Check ====="
-      if [ -e /dev/kvm ]; then
-        echo "KVM Available"
-      else
-        echo "KVM Not Available"
-      fi
+      - name: Install Python 3.13
+        run: |
+          sudo apt install -y software-properties-common
+          sudo add-apt-repository ppa:deadsnakes/ppa -y
+          sudo apt update
 
-  - name: Update System
-    run: |
-      sudo apt update
-      sudo apt upgrade -y
+          sudo apt install -y \
+            python3.13 \
+            python3.13-full \
+            python3.13-venv
 
-  - name: Install Python 3.13
-    run: |
-      sudo apt install -y software-properties-common
-      sudo add-apt-repository ppa:deadsnakes/ppa -y
-      sudo apt update
+          python3.13 --version
 
-      sudo apt install -y \
-        python3.13 \
-        python3.13-full \
-        python3.13-venv
+          python3.13 -m ensurepip --upgrade || true
+          python3.13 -m pip install --upgrade pip
 
-      python3.13 --version
+          python3.13 -m pip install \
+            Flask \
+            Flask-Bcrypt \
+            Flask-SocketIO \
+            Flask-Sock \
+            requests \
+            psutil \
+            paramiko \
+            aiohttp \
+            websockets \
+            colorama \
+            pyyaml
 
-  - name: Install Python Packages
-    run: |
-      python3.13 -m ensurepip --upgrade || true
-      python3.13 -m pip install --upgrade pip
+      - name: Install QEMU OVMF SWTPM and Tools
+        run: |
+          sudo apt install -y \
+            qemu-kvm \
+            qemu-system-x86 \
+            qemu-utils \
+            ovmf \
+            swtpm \
+            swtpm-tools \
+            cpu-checker \
+            curl \
+            wget \
+            git \
+            unzip \
+            zip \
+            nano \
+            htop \
+            tmux \
+            screen \
+            tmate
 
-      python3.13 -m pip install \
-        Flask \
-        Flask-Bcrypt \
-        Flask-SocketIO \
-        Flask-Sock \
-        requests \
-        psutil \
-        paramiko \
-        aiohttp \
-        websockets \
-        colorama \
-        pyyaml
+      - name: Verify Environment
+        run: |
+          echo "===== KVM ====="
+          kvm-ok || true
 
-  - name: Install Virtualization Packages
-    run: |
-      sudo apt update
+          echo
+          echo "===== /dev/kvm ====="
+          ls -la /dev/kvm || true
 
-      sudo apt install -y \
-        qemu-kvm \
-        qemu-system-x86 \
-        qemu-utils \
-        libvirt-daemon-system \
-        libvirt-clients \
-        bridge-utils \
-        cpu-checker \
-        virt-manager \
-        virtinst \
-        ovmf \
-        swtpm \
-        swtpm-tools \
-        genisoimage \
-        wget \
-        curl \
-        git \
-        unzip \
-        zip \
-        nano \
-        htop \
-        screen \
-        tmux \
-        tmate
+          echo
+          echo "===== OVMF ====="
+          find /usr/share -name "*OVMF*.fd" 2>/dev/null || true
 
-  - name: Verify Virtualization Environment
-    run: |
-      echo "===== KVM ====="
-      kvm-ok || true
+          echo
+          echo "===== SWTPM ====="
+          swtpm --version || true
 
-      echo
-      echo "===== /dev/kvm ====="
-      ls -la /dev/kvm || true
+          echo
+          echo "===== QEMU ====="
+          qemu-system-x86_64 --version
 
-      echo
-      echo "===== CPU Virtualization Flags ====="
-      egrep -c '(vmx|svm)' /proc/cpuinfo || true
+      - name: Start Tmate Session
+        run: |
+          tmate -F &
+          sleep 20
 
-      echo
-      echo "===== OVMF Files ====="
-      find /usr/share -name "*OVMF*.fd" 2>/dev/null || true
+          echo "================================="
+          echo "TMATE SSH"
+          echo "================================="
+          tmate display -p '#{tmate_ssh}'
 
-      echo
-      echo "===== SWTPM ====="
-      swtpm --version || true
+          echo
+          echo "================================="
+          echo "TMATE WEB"
+          echo "================================="
+          tmate display -p '#{tmate_web}'
 
-      echo
-      echo "===== QEMU ====="
-      qemu-system-x86_64 --version
-
-  - name: Prepare TPM Directory
-    run: |
-      mkdir -p ~/tpm
-
-  - name: Start Tmate Session
-    run: |
-      tmate -F &
-      sleep 20
-
-      echo "===================================="
-      echo "TMATE SSH"
-      echo "===================================="
-      tmate display -p '#{tmate_ssh}'
-
-      echo
-      echo "===================================="
-      echo "TMATE WEB"
-      echo "===================================="
-      tmate display -p '#{tmate_web}'
-
-      echo
-      echo "Workflow will stay alive..."
-
-      tail -f /dev/null
-```
+          echo
+          echo "Workflow running..."
+          tail -f /dev/null
