@@ -1,48 +1,156 @@
-name: Ubuntu KVM + Tmate
+name: Ubuntu + QEMU + OVMF + SWTPM + Python 3.13 + Tmate
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 jobs:
-  ubuntu:
-    runs-on: ubuntu-24.04
+ubuntu:
+runs-on: ubuntu-24.04
+timeout-minutes: 360
 
-    steps:
-      - name: System Info
-        run: |
-          echo "===== CPU ====="
-          lscpu
-          echo
-          echo "===== Memory ====="
-          free -h
-          echo
-          echo "===== KVM Check ====="
-          if [ -e /dev/kvm ]; then
-            echo "KVM Available"
-          else
-            echo "KVM Not Available"
-          fi
-      - name: Install Python And Qemu
-        run: |
-          sudo apt install  software-properties-common -y && sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt install python3.13 python3.13-full python3.13-venv -y
-&& python3.13 --version && python3.13 -m pip install Flask Flask-Bcrypt Flask-SocketIO Flask-Sock requests psutil paramiko 
+```
+steps:
+  - name: System Information
+    run: |
+      echo "===== OS ====="
+      cat /etc/os-release
 
-      - name: Install Packages
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            qemu-kvm \
-            libvirt-daemon-system \
-            libvirt-clients \
-            bridge-utils \
-            cpu-checker \
-            tmate qemu-system
+      echo
+      echo "===== CPU ====="
+      lscpu
 
-      - name: Verify KVM
-        run: |
-          kvm-ok || true
-          ls -la /dev/kvm || true
+      echo
+      echo "===== RAM ====="
+      free -h
 
-      - name: Start Tmate Session
-        run: |
-          tmate -F
+      echo
+      echo "===== Disk ====="
+      df -h
+
+      echo
+      echo "===== Virtualization ====="
+      systemd-detect-virt || true
+
+      echo
+      echo "===== KVM Check ====="
+      if [ -e /dev/kvm ]; then
+        echo "KVM Available"
+      else
+        echo "KVM Not Available"
+      fi
+
+  - name: Update System
+    run: |
+      sudo apt update
+      sudo apt upgrade -y
+
+  - name: Install Python 3.13
+    run: |
+      sudo apt install -y software-properties-common
+      sudo add-apt-repository ppa:deadsnakes/ppa -y
+      sudo apt update
+
+      sudo apt install -y \
+        python3.13 \
+        python3.13-full \
+        python3.13-venv
+
+      python3.13 --version
+
+  - name: Install Python Packages
+    run: |
+      python3.13 -m ensurepip --upgrade || true
+      python3.13 -m pip install --upgrade pip
+
+      python3.13 -m pip install \
+        Flask \
+        Flask-Bcrypt \
+        Flask-SocketIO \
+        Flask-Sock \
+        requests \
+        psutil \
+        paramiko \
+        aiohttp \
+        websockets \
+        colorama \
+        pyyaml
+
+  - name: Install Virtualization Packages
+    run: |
+      sudo apt update
+
+      sudo apt install -y \
+        qemu-kvm \
+        qemu-system-x86 \
+        qemu-utils \
+        libvirt-daemon-system \
+        libvirt-clients \
+        bridge-utils \
+        cpu-checker \
+        virt-manager \
+        virtinst \
+        ovmf \
+        swtpm \
+        swtpm-tools \
+        genisoimage \
+        wget \
+        curl \
+        git \
+        unzip \
+        zip \
+        nano \
+        htop \
+        screen \
+        tmux \
+        tmate
+
+  - name: Verify Virtualization Environment
+    run: |
+      echo "===== KVM ====="
+      kvm-ok || true
+
+      echo
+      echo "===== /dev/kvm ====="
+      ls -la /dev/kvm || true
+
+      echo
+      echo "===== CPU Virtualization Flags ====="
+      egrep -c '(vmx|svm)' /proc/cpuinfo || true
+
+      echo
+      echo "===== OVMF Files ====="
+      find /usr/share -name "*OVMF*.fd" 2>/dev/null || true
+
+      echo
+      echo "===== SWTPM ====="
+      swtpm --version || true
+
+      echo
+      echo "===== QEMU ====="
+      qemu-system-x86_64 --version
+
+  - name: Prepare TPM Directory
+    run: |
+      mkdir -p ~/tpm
+
+  - name: Start Tmate Session
+    run: |
+      tmate -F &
+      sleep 20
+
+      echo "===================================="
+      echo "TMATE SSH"
+      echo "===================================="
+      tmate display -p '#{tmate_ssh}'
+
+      echo
+      echo "===================================="
+      echo "TMATE WEB"
+      echo "===================================="
+      tmate display -p '#{tmate_web}'
+
+      echo
+      echo "Workflow will stay alive..."
+
+      tail -f /dev/null
+```
