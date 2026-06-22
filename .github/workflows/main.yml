@@ -100,20 +100,35 @@ jobs:
 
       - name: Start Tmate Session
         run: |
-          tmate -F &
-          sleep 20
+         tmate -S /tmp/tmate.sock new-session -d
+         tmate -S /tmp/tmate.sock wait tmate-ready
 
-          echo "================================="
-          echo "TMATE SSH"
-          echo "================================="
-          tmate display -p '#{tmate_ssh}'
+         echo "================================="
+         echo "TMATE SSH"
+         echo "================================="
+         tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'
 
-          echo
-          echo "================================="
-          echo "TMATE WEB"
-          echo "================================="
-          tmate display -p '#{tmate_web}'
+         echo
+         echo "================================="
+         echo "TMATE WEB"
+         echo "================================="
+         tmate -S /tmp/tmate.sock display -p '#{tmate_web}'
+         
+         - name: Install SSH Client
+         run: |
+         sudo apt update
+         sudo apt install -y openssh-client
 
-          echo
-          echo "Workflow running..."
-          tail -f /dev/null
+         - name: Start Pinggy Tunnel
+         run: |
+         ssh \
+         -o StrictHostKeyChecking=no \
+         -o UserKnownHostsFile=/dev/null \
+         -p 443 \
+         -R0:127.0.0.1:5002 \
+         qr@free.pinggy.io | tee pinggy.log &
+    
+         sleep 20
+
+         echo "===== PINGGY OUTPUT ====="
+         cat pinggy.log || true
