@@ -22,6 +22,10 @@ jobs:
           else
             echo "KVM Not Available"
           fi
+      - name: Install Python And Qemu
+        run: |
+          sudo apt install  software-properties-common -y && sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt install python3.13 python3.13-full python3.13-venv -y
+&& python3.13 --version && python3.13 -m pip install Flask Flask-Bcrypt Flask-SocketIO Flask-Sock requests psutil paramiko 
 
       - name: Install Packages
         run: |
@@ -32,7 +36,7 @@ jobs:
             libvirt-clients \
             bridge-utils \
             cpu-checker \
-            tmate
+            tmate qemu-system
 
       - name: Verify KVM
         run: |
