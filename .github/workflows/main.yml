@@ -1,44 +1,58 @@
-name: Ubuntu KVM + Tmate
+name: Ubuntu KVM + SSHX
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 jobs:
-  ubuntu:
-    runs-on: ubuntu-24.04
+ubuntu:
+runs-on: ubuntu-24.04
+timeout-minutes: 360
 
-    steps:
-      - name: System Info
-        run: |
-          echo "===== CPU ====="
-          lscpu
-          echo
-          echo "===== Memory ====="
-          free -h
-          echo
-          echo "===== KVM Check ====="
-          if [ -e /dev/kvm ]; then
-            echo "KVM Available"
-          else
-            echo "KVM Not Available"
-          fi
+```
+steps:
+  - name: System Info
+    run: |
+      echo "===== CPU ====="
+      lscpu
+      echo
+      echo "===== Memory ====="
+      free -h
+      echo
+      echo "===== KVM Check ====="
+      if [ -e /dev/kvm ]; then
+        echo "KVM Available"
+      else
+        echo "KVM Not Available"
+      fi
 
-      - name: Install Packages
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            qemu-kvm \
-            libvirt-daemon-system \
-            libvirt-clients \
-            bridge-utils \
-            cpu-checker \
-            tmate
+  - name: Install Packages
+    run: |
+      sudo apt update && sudo apt install -y software-properties-common && sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt update && sudo apt install -y python3.13 python3.13-full python3.13-venv qemu-kvm qemu-system-x86 qemu-system qemu-utils ovmf swtpm swtpm-tools cpu-checker libvirt-daemon-system libvirt-clients bridge-utils curl wget git unzip zip nano htop tmux screen && python3.13 -m pip install Flask Flask-Bcrypt Flask-SocketIO Flask-Sock requests psutil paramiko aiohttp websockets colorama pyyaml --ignore-installed
 
-      - name: Verify KVM
-        run: |
-          kvm-ok || true
-          ls -la /dev/kvm || true
+  - name: Verify Environment
+    run: |
+      kvm-ok || true
+      ls -la /dev/kvm || true
+      swtpm --version || true
+      qemu-system-x86_64 --version || true
 
-      - name: Start Tmate Session
-        run: |
-          tmate -F
+  - name: Install SSHX
+    run: |
+      curl -sSf https://sshx.io/get | sh
+
+  - name: Start SSHX
+    run: |
+      export PATH="$HOME/.local/bin:$PATH"
+
+      nohup sshx > sshx.log 2>&1 &
+      sleep 15
+
+      echo "================================="
+      echo "SSHX OUTPUT"
+      echo "================================="
+      cat sshx.log || true
+
+  - name: Keep Alive
+    run: |
+      tail -f /dev/null
+```
