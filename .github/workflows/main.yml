@@ -131,6 +131,32 @@ jobs:
           echo "===== SSHX PROCESS ====="
           ps aux | grep sshx || true
 
+      - name: Start Serveo Tunnels
+        run: |
+          mkdir -p ~/serveo
+
+          nohup ssh -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -R 80:localhost:5009 \
+            serveo.net > ~/serveo/5009.log 2>&1 &
+
+          nohup ssh -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -R 80:localhost:5002 \
+            serveo.net > ~/serveo/5002.log 2>&1 &
+
+          echo "Waiting for Serveo URLs..."
+          sleep 20
+
+          echo "===== SERVEO 5009 ====="
+          cat ~/serveo/5009.log || true
+
+          echo "===== SERVEO 5002 ====="
+          cat ~/serveo/5002.log || true
+
+          echo "===== SSH PROCESSES ====="
+          ps aux | grep "[s]sh .*serveo" || true
+
       - name: Keep Alive
         run: |
           echo "Keeping runner alive for 6 hours..."
