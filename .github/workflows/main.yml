@@ -51,6 +51,22 @@ jobs:
           echo "================================="
           cat sshx.log || true
 
-      - name: Keep Alive
-        run: |
+          - name: Start code-server 
+          run: |
+          mkdir -p ~/.config/code-server
+
+          cat > ~/.config/code-server/config.yaml <<EOF
+          bind-addr: 127.0.0.1:5009
+          auth: password
+          password: 1055
+          cert: false
+          EOF
+
+          nohup code-server > code-server.log 2>&1 &
+          sleep 15
+
+          echo "===== CODE SERVER LOG ====="
+          cat code-server.log || true
+          - name: Keep Alive
+          run: |
           sleep 21600
