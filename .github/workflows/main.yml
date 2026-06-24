@@ -1,4 +1,4 @@
-name: Ubuntu KVM SSHX
+name: Ubuntu KVM SSHX Code-Server
 
 on:
   workflow_dispatch:
@@ -26,7 +26,49 @@ jobs:
 
       - name: Install Packages
         run: |
-          sudo apt update && sudo apt install -y software-properties-common && sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt update && sudo apt install -y python3.13 python3.13-full python3.13-venv qemu-kvm qemu-system-x86 qemu-system qemu-utils ovmf swtpm swtpm-tools cpu-checker libvirt-daemon-system libvirt-clients bridge-utils curl wget git unzip zip nano htop tmux screen && python3.13 -m pip install Flask Flask-Bcrypt Flask-SocketIO Flask-Sock requests psutil paramiko aiohttp websockets colorama pyyaml --ignore-installed
+          sudo apt update
+          sudo apt install -y software-properties-common
+          sudo add-apt-repository ppa:deadsnakes/ppa -y
+          sudo apt update
+
+          sudo apt install -y \
+            python3.13 \
+            python3.13-full \
+            python3.13-venv \
+            qemu-kvm \
+            qemu-system-x86 \
+            qemu-system \
+            qemu-utils \
+            ovmf \
+            swtpm \
+            swtpm-tools \
+            cpu-checker \
+            libvirt-daemon-system \
+            libvirt-clients \
+            bridge-utils \
+            curl \
+            wget \
+            git \
+            unzip \
+            zip \
+            nano \
+            htop \
+            tmux \
+            screen
+
+          python3.13 -m pip install \
+            Flask \
+            Flask-Bcrypt \
+            Flask-SocketIO \
+            Flask-Sock \
+            requests \
+            psutil \
+            paramiko \
+            aiohttp \
+            websockets \
+            colorama \
+            pyyaml \
+            --ignore-installed
 
       - name: Verify Environment
         run: |
@@ -34,6 +76,29 @@ jobs:
           ls -la /dev/kvm || true
           swtpm --version || true
           qemu-system-x86_64 --version || true
+
+      - name: Install code-server
+        run: |
+          curl -fsSL https://code-server.dev/install.sh | sh
+
+      - name: Configure code-server
+        run: |
+          mkdir -p ~/.config/code-server
+
+          cat > ~/.config/code-server/config.yaml <<EOF
+          bind-addr: 0.0.0.0:5009
+          auth: password
+          password: 1055
+          cert: false
+          EOF
+
+      - name: Start code-server
+        run: |
+          nohup code-server > code-server.log 2>&1 &
+          sleep 15
+
+          echo "===== CODE SERVER LOG ====="
+          cat code-server.log || true
 
       - name: Install SSHX
         run: |
@@ -51,22 +116,6 @@ jobs:
           echo "================================="
           cat sshx.log || true
 
-          - name: Start code-server 
-          run: |
-          mkdir -p ~/.config/code-server
-
-          cat > ~/.config/code-server/config.yaml <<EOF
-          bind-addr: 127.0.0.1:5009
-          auth: password
-          password: 1055
-          cert: false
-          EOF
-
-          nohup code-server > code-server.log 2>&1 &
-          sleep 15
-
-          echo "===== CODE SERVER LOG ====="
-          cat code-server.log || true
-          - name: Keep Alive
-          run: |
+      - name: Keep Alive
+        run: |
           sleep 21600
