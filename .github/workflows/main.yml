@@ -17,6 +17,9 @@ jobs:
           echo "===== Memory ====="
           free -h
           echo
+          echo "===== Disk ====="
+          df -h
+          echo
           echo "===== KVM Check ====="
           if [ -e /dev/kvm ]; then
             echo "KVM Available"
@@ -83,22 +86,33 @@ jobs:
 
       - name: Configure code-server
         run: |
-          mkdir -p ~/.config/code-server
+          sudo mkdir -p /root/.config/code-server
 
-          cat > ~/.config/code-server/config.yaml <<EOF
+          sudo tee /root/.config/code-server/config.yaml > /dev/null <<EOF
           bind-addr: 0.0.0.0:5009
           auth: password
           password: 1055
           cert: false
           EOF
 
-      - name: Start code-server
+      - name: Start code-server as root
         run: |
-          nohup code-server > code-server.log 2>&1 &
-          sleep 15
+          sudo nohup code-server \
+            --config /root/.config/code-server/config.yaml \
+            --user-data-dir /root/.local/share/code-server \
+            --extensions-dir /root/.local/share/code-server/extensions \
+            >/tmp/code-server.log 2>&1 &
+
+          sleep 20
+
+          echo "===== CODE SERVER PROCESS ====="
+          ps aux | grep code-server || true
 
           echo "===== CODE SERVER LOG ====="
-          cat code-server.log || true
+          sudo cat /tmp/code-server.log || true
+
+          echo "===== PORT CHECK ====="
+          sudo ss -tulpn | grep 5009 || true
 
       - name: Install SSHX
         run: |
@@ -111,11 +125,13 @@ jobs:
           nohup sshx > sshx.log 2>&1 &
           sleep 20
 
-          echo "================================="
-          echo "SSHX OUTPUT"
-          echo "================================="
+          echo "===== SSHX OUTPUT ====="
           cat sshx.log || true
+
+          echo "===== SSHX PROCESS ====="
+          ps aux | grep sshx || true
 
       - name: Keep Alive
         run: |
+          echo "Keeping runner alive for 6 hours..."
           sleep 21600
