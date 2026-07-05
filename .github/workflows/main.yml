@@ -59,7 +59,7 @@ jobs:
             tmux \
             screen
 
-          python3.13 -m pip install \
+          sudo python3.13 -m pip install \
             Flask \
             Flask-Bcrypt \
             Flask-SocketIO \
